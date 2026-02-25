@@ -1,13 +1,12 @@
 import React from 'react';
-import { Badge, makeStyles, mergeClasses } from '@fluentui/react-components';
+import { makeStyles } from '@fluentui/react-components';
 import { DocStatus, STATUS_LABELS } from '../types';
 
 const STATUS_COLORS: Record<DocStatus, string> = {
-  unread: '#4A9FE5',
+  new: '#555555',
   reading: '#E8A317',
-  reviewed: '#4CAF50',
   'action-needed': '#E85D4A',
-  done: '#6B6B6B',
+  done: '#4CAF50',
 };
 
 const useStyles = makeStyles({
@@ -36,6 +35,23 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, onClick }: StatusBadgeProps) {
   const styles = useStyles();
   const color = STATUS_COLORS[status];
+
+  // Don't show badge for "new" status - keep the list clean
+  if (status === 'new') {
+    return (
+      <span
+        className={styles.badge}
+        style={{ color: '#888', border: '1px solid #444' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
+        title="Click to set status"
+      >
+        +
+      </span>
+    );
+  }
 
   return (
     <span

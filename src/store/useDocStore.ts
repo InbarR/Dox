@@ -47,9 +47,8 @@ interface DocStore {
 }
 
 const STATUS_CYCLE: DocStatus[] = [
-  'unread',
+  'new',
   'reading',
-  'reviewed',
   'action-needed',
   'done',
 ];
@@ -73,8 +72,13 @@ export const useDocStore = create<DocStore>((set, get) => ({
   reminderDialogDocId: null,
 
   loadDocs: async () => {
-    const docs = await window.docshelf.loadDocs();
-    set({ docs: docs || [] });
+    const raw = await window.docshelf.loadDocs();
+    // Migrate old statuses
+    const docs = (raw || []).map((d: any) => ({
+      ...d,
+      status: d.status === 'unread' || d.status === 'reviewed' ? 'new' : d.status,
+    }));
+    set({ docs });
   },
 
   addDoc: (input) => {
@@ -87,7 +91,7 @@ export const useDocStore = create<DocStore>((set, get) => ({
       sharedBy: input.sharedBy,
       dateAdded: new Date().toISOString(),
       pinned: false,
-      status: 'unread',
+      status: 'new',
       tags: [],
       notes: '',
     };
@@ -208,7 +212,7 @@ export const useDocStore = create<DocStore>((set, get) => ({
             sharedBy: doc.owner || '',
             dateAdded: new Date().toISOString(),
             pinned: false,
-            status: 'unread',
+            status: 'new',
             tags: [],
             notes: '',
           });

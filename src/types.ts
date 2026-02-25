@@ -9,9 +9,8 @@ export type DocSource =
   | 'other';
 
 export type DocStatus =
-  | 'unread'
+  | 'new'
   | 'reading'
-  | 'reviewed'
   | 'action-needed'
   | 'done';
 
@@ -29,15 +28,13 @@ export interface DocItem {
   tags: string[];
   notes: string;
   reminder?: string;
-  openIn?: string; // e.g. "Word", "Excel", "PowerPoint", "Browser" - set when doc is detected as open
+  openIn?: string;
 }
 
 export type FilterView =
   | 'all'
   | 'pinned'
-  | 'unread'
   | 'reading'
-  | 'reviewed'
   | 'action-needed'
   | 'done';
 
@@ -52,17 +49,15 @@ export type SortField =
 export type SortDirection = 'asc' | 'desc';
 
 export const STATUS_ORDER: DocStatus[] = [
-  'unread',
+  'new',
   'reading',
-  'reviewed',
   'action-needed',
   'done',
 ];
 
 export const STATUS_LABELS: Record<DocStatus, string> = {
-  unread: 'Unread',
-  reading: 'Reading',
-  reviewed: 'Reviewed',
+  new: 'New',
+  reading: 'In Progress',
   'action-needed': 'Action Needed',
   done: 'Done',
 };

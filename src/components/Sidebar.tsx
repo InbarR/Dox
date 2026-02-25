@@ -10,9 +10,7 @@ import {
 import {
   DocumentMultiple24Regular,
   Pin24Regular,
-  MailUnread24Regular,
   BookOpen24Regular,
-  CheckmarkCircle24Regular,
   Warning24Regular,
   Checkmark24Regular,
 } from '@fluentui/react-icons';
@@ -76,9 +74,7 @@ const NAV_ITEMS: { view: FilterView; label: string; icon: React.ReactElement }[]
 ];
 
 const STATUS_NAV: { view: FilterView; label: string; icon: React.ReactElement }[] = [
-  { view: 'unread', label: 'Unread', icon: <MailUnread24Regular /> },
-  { view: 'reading', label: 'Reading', icon: <BookOpen24Regular /> },
-  { view: 'reviewed', label: 'Reviewed', icon: <CheckmarkCircle24Regular /> },
+  { view: 'reading', label: 'In Progress', icon: <BookOpen24Regular /> },
   { view: 'action-needed', label: 'Action Needed', icon: <Warning24Regular /> },
   { view: 'done', label: 'Done', icon: <Checkmark24Regular /> },
 ];
