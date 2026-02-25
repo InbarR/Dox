@@ -38,9 +38,7 @@ declare global {
       scanBrowserTabs: () => Promise<Array<{ title: string; type: string }>>;
 
       chatSend: (messages: Array<{ role: string; content: string }>) =>
-        Promise<{ ok?: boolean; error?: string }>;
-      onChatChunk: (callback: (chunk: string) => void) => () => void;
-      onChatDone: (callback: () => void) => () => void;
+        Promise<{ ok?: boolean; reply?: string; error?: string }>;
 
       graphLogin: (clientId: string) => Promise<GraphLoginResult>;
       graphGetDocs: () => Promise<GraphDoc[]>;

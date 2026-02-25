@@ -19,16 +19,6 @@ contextBridge.exposeInMainWorld('docshelf', {
   // AI Chat
   chatSend: (messages: Array<{ role: string; content: string }>) =>
     ipcRenderer.invoke('chat-send', messages),
-  onChatChunk: (callback: (chunk: string) => void) => {
-    const handler = (_event: any, chunk: string) => callback(chunk);
-    ipcRenderer.on('chat-chunk', handler);
-    return () => ipcRenderer.removeListener('chat-chunk', handler);
-  },
-  onChatDone: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('chat-done', handler);
-    return () => ipcRenderer.removeListener('chat-done', handler);
-  },
 
   // Graph API
   graphLogin: (clientId: string) => ipcRenderer.invoke('graph-login', clientId),
