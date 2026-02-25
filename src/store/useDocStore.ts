@@ -189,20 +189,26 @@ export const useDocStore = create<DocStore>((set, get) => ({
 
       // Find docs not already in the store
       const existing = get().docs;
-      const existingKeys = new Set(
-        existing.map((d) => (d.url || d.title).toLowerCase())
+      const existingUrls = new Set(
+        existing.filter((d) => d.url).map((d) => d.url.toLowerCase())
       );
-      // Also index by title for matching
-      const existingByTitle = new Map<string, DocItem>();
-      for (const d of existing) {
-        existingByTitle.set(d.title.toLowerCase(), d);
-      }
+      const existingTitles = new Set(
+        existing.map((d) => d.title.toLowerCase())
+      );
 
       let changed = false;
       const newDocs: DocItem[] = [];
       for (const doc of scanned) {
-        const key = (doc.path || doc.title).toLowerCase();
-        if (!existingKeys.has(key)) {
+        // Skip docs without a URL - they're noise from browser tab titles
+        if (!doc.path) continue;
+        const urlKey = doc.path.toLowerCase();
+        const titleKey = doc.title.toLowerCase();
+        // Skip if URL or title already exists
+        if (existingUrls.has(urlKey) || existingTitles.has(titleKey)) continue;
+        // Prevent adding duplicates within the same batch
+        existingUrls.add(urlKey);
+        existingTitles.add(titleKey);
+        {
           newDocs.push({
             id: uuidv4(),
             title: doc.title,

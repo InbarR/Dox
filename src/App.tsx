@@ -181,7 +181,8 @@ function AppContent() {
             const trimmed = text.trim();
             if (!trimmed.startsWith('http')) return;
 
-            const exists = useDocStore.getState().docs.some(
+            const existingDocs = useDocStore.getState().docs;
+            const exists = existingDocs.some(
               (d) => d.url.toLowerCase() === trimmed.toLowerCase()
             );
             if (exists) return;
@@ -277,6 +278,15 @@ function AppContent() {
           } catch {}
         }
         if (!title) title = 'Untitled Document';
+
+        // Check for duplicates by URL or title
+        const docs = useDocStore.getState().docs;
+        const dup = docs.some(
+          (d) =>
+            d.url.toLowerCase() === trimmedUrl.toLowerCase() ||
+            d.title.toLowerCase() === title.toLowerCase()
+        );
+        if (dup) return;
 
         // Detect type from title (might have .docx) or URL
         const type = detectTypeFromUrl(title) !== 'other'
