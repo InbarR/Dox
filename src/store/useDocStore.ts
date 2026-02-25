@@ -221,7 +221,11 @@ export const useDocStore = create<DocStore>((set, get) => ({
 
   refreshOpenStatus: async () => {
     try {
-      const openDocs = await window.docshelf.scanOpenDocs();
+      const [openDocs, browserTabs] = await Promise.all([
+        window.docshelf.scanOpenDocs(),
+        window.docshelf.scanBrowserTabs(),
+      ]);
+
       const openTitles = new Map<string, string>();
       for (const od of openDocs) {
         openTitles.set(od.title.toLowerCase(), od.app || 'Open');
@@ -229,6 +233,10 @@ export const useDocStore = create<DocStore>((set, get) => ({
           openTitles.set(od.path.toLowerCase(), od.app || 'Open');
         }
       }
+      for (const bt of browserTabs) {
+        openTitles.set(bt.title.toLowerCase(), 'Browser');
+      }
+
       const docs = get().docs.map((d) => {
         const byTitle = openTitles.get(d.title.toLowerCase());
         const byUrl = d.url ? openTitles.get(d.url.toLowerCase()) : undefined;
@@ -264,13 +272,23 @@ export const useDocStore = create<DocStore>((set, get) => ({
     // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
+      // Map common search terms to type codes
+      const typeAliases: Record<string, string> = {
+        word: 'doc', doc: 'doc', docx: 'doc',
+        ppt: 'ppt', pptx: 'ppt', powerpoint: 'ppt',
+        xls: 'xls', xlsx: 'xls', excel: 'xls',
+        pdf: 'pdf',
+      };
+      const matchedType = typeAliases[q];
       filtered = filtered.filter(
         (d) =>
           d.title.toLowerCase().includes(q) ||
           d.sharedBy.toLowerCase().includes(q) ||
           d.url.toLowerCase().includes(q) ||
           d.notes.toLowerCase().includes(q) ||
-          d.tags.some((t) => t.toLowerCase().includes(q))
+          d.tags.some((t) => t.toLowerCase().includes(q)) ||
+          d.type === matchedType ||
+          d.source.toLowerCase().includes(q)
       );
     }
 

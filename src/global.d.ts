@@ -35,6 +35,7 @@ declare global {
 
       scanRecentDocs: () => Promise<ScannedDoc[]>;
       scanOpenDocs: () => Promise<ScannedDoc[]>;
+      scanBrowserTabs: () => Promise<Array<{ title: string; type: string }>>;
 
       graphLogin: (clientId: string) => Promise<GraphLoginResult>;
       graphGetDocs: () => Promise<GraphDoc[]>;

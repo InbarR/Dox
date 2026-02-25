@@ -17,12 +17,14 @@ import {
   ArrowSort24Regular,
   ArrowDownload24Regular,
   Navigation24Regular,
+  ArrowSync24Regular,
 } from '@fluentui/react-icons';
 import { useDocStore } from '../store/useDocStore';
 import { DocType, TYPE_LABELS, SortField } from '../types';
 
 interface ToolbarProps {
   onOpenImport: () => void;
+  onRefresh: () => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 }
@@ -71,7 +73,7 @@ const SORT_OPTIONS: { field: SortField; label: string }[] = [
   { field: 'sharedBy', label: 'Shared By' },
 ];
 
-export function Toolbar({ onOpenImport, sidebarOpen, onToggleSidebar }: ToolbarProps) {
+export function Toolbar({ onOpenImport, onRefresh, sidebarOpen, onToggleSidebar }: ToolbarProps) {
   const styles = useStyles();
   const searchQuery = useDocStore((s) => s.searchQuery);
   const setSearchQuery = useDocStore((s) => s.setSearchQuery);
@@ -157,6 +159,14 @@ export function Toolbar({ onOpenImport, sidebarOpen, onToggleSidebar }: ToolbarP
             </MenuList>
           </MenuPopover>
         </Menu>
+
+        <Button
+          appearance="subtle"
+          icon={<ArrowSync24Regular />}
+          onClick={onRefresh}
+          title="Rescan for new documents"
+          size="small"
+        />
 
         <Button
           appearance="subtle"

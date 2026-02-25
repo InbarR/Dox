@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('docshelf', {
   // Scanner
   scanRecentDocs: () => ipcRenderer.invoke('scan-recent-docs'),
   scanOpenDocs: () => ipcRenderer.invoke('scan-open-docs'),
+  scanBrowserTabs: () => ipcRenderer.invoke('scan-browser-tabs'),
 
   // Graph API
   graphLogin: (clientId: string) => ipcRenderer.invoke('graph-login', clientId),

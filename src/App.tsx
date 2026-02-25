@@ -80,11 +80,11 @@ function AppContent() {
     loadDocs().then(() => autoImport().then(() => refreshOpenStatus()));
   }, [loadDocs, autoImport, refreshOpenStatus]);
 
-  // Periodically scan for new docs and refresh open status (every 2 min)
+  // Periodically scan for new docs and refresh open status (every 15s)
   useEffect(() => {
     const interval = setInterval(() => {
       autoImport().then(() => refreshOpenStatus());
-    }, 120000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [autoImport, refreshOpenStatus]);
 
@@ -218,6 +218,7 @@ function AppContent() {
         <div className={styles.dragBar} />
         <Toolbar
           onOpenImport={() => setImportDialogOpen(true)}
+          onRefresh={() => autoImport().then(() => refreshOpenStatus())}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />

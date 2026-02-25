@@ -21,6 +21,7 @@ import {
   Delete24Regular,
   Clock24Regular,
   CalendarClock20Regular,
+  FolderOpen24Regular,
 } from '@fluentui/react-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { DocItem, SOURCE_LABELS, STATUS_LABELS, STATUS_ORDER } from '../types';
@@ -155,6 +156,18 @@ export function DocCard({ doc }: DocCardProps) {
     if (doc.url) navigator.clipboard.writeText(doc.url);
   };
 
+  const handleOpenLocation = () => {
+    if (!doc.url) return;
+    try {
+      const u = new URL(doc.url);
+      // Navigate to the parent folder
+      const parts = u.pathname.split('/');
+      parts.pop(); // remove filename
+      const folderUrl = u.origin + parts.join('/');
+      window.docshelf.openExternal(folderUrl).catch(() => {});
+    } catch {}
+  };
+
   return (
     <div
       className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
@@ -251,6 +264,11 @@ export function DocCard({ doc }: DocCardProps) {
               <MenuItem icon={<Link24Regular />} onClick={handleCopyLink}>
                 Copy Link
               </MenuItem>
+              {doc.url && (
+                <MenuItem icon={<FolderOpen24Regular />} onClick={handleOpenLocation}>
+                  Open Location
+                </MenuItem>
+              )}
               <MenuDivider />
               <MenuItem
                 icon={doc.pinned ? <Pin24Filled /> : <Pin24Regular />}

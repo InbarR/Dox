@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, Notification } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { scanRecentDocs, scanOpenDocs } from './scanner';
+import { scanBrowserTabs } from './browser-tabs';
 import {
   graphLogin,
   graphGetAllDocs,
@@ -111,6 +112,14 @@ ipcMain.handle('scan-open-docs', async () => {
     try {
       fs.appendFileSync(debugFile, `[${new Date().toISOString()}] ERROR: ${err?.message}\n`);
     } catch {}
+    return [];
+  }
+});
+
+ipcMain.handle('scan-browser-tabs', async () => {
+  try {
+    return await scanBrowserTabs();
+  } catch {
     return [];
   }
 });
