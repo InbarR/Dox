@@ -84,6 +84,13 @@ export function Toolbar({ onOpenImport, onRefresh, sidebarOpen, onToggleSidebar 
   const sortDirection = useDocStore((s) => s.sortDirection);
   const toggleSortDirection = useDocStore((s) => s.toggleSortDirection);
   const setAddDialogOpen = useDocStore((s) => s.setAddDialogOpen);
+  const getFilteredDocs = useDocStore((s) => s.getFilteredDocs);
+  useDocStore((s) => s.docs);
+  useDocStore((s) => s.filterView);
+  useDocStore((s) => s.filterType);
+  useDocStore((s) => s.filterSource);
+  const totalDocs = useDocStore((s) => s.docs.length);
+  const filteredCount = getFilteredDocs().length;
 
   return (
     <div className={styles.toolbar}>
@@ -98,6 +105,11 @@ export function Toolbar({ onOpenImport, onRefresh, sidebarOpen, onToggleSidebar 
       <Input
         className={styles.searchBox}
         contentBefore={<Search24Regular />}
+        contentAfter={
+          <span style={{ fontSize: '11px', color: '#888', whiteSpace: 'nowrap' }}>
+            {filteredCount !== totalDocs ? `${filteredCount}/${totalDocs}` : `${totalDocs}`}
+          </span>
+        }
         placeholder="Search documents..."
         value={searchQuery}
         onChange={(_, data) => setSearchQuery(data.value)}

@@ -46,7 +46,8 @@ const useStyles = makeStyles({
     },
   },
   cardSelected: {
-    backgroundColor: tokens.colorNeutralBackground3Selected,
+    backgroundColor: '#1a3a5c',
+    borderLeft: '3px solid #4A9FE5',
   },
   info: {
     flex: 1,

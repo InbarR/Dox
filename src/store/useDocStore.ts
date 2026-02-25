@@ -55,7 +55,9 @@ const STATUS_CYCLE: DocStatus[] = [
 ];
 
 function persist(docs: DocItem[]) {
-  window.docshelf?.saveDocs(docs);
+  // Strip runtime-only fields before saving
+  const cleaned = docs.map(({ openIn, ...rest }) => rest);
+  window.docshelf?.saveDocs(cleaned);
 }
 
 export const useDocStore = create<DocStore>((set, get) => ({
@@ -162,6 +164,14 @@ export const useDocStore = create<DocStore>((set, get) => ({
         window.docshelf.scanRecentDocs(),
       ]);
 
+      // Build a title→doc lookup from COM/MRU results (which have URLs)
+      const urlLookup = new Map<string, { path: string; type: string; source: string; owner?: string }>();
+      for (const doc of [...openDocs, ...recentDocs]) {
+        if (doc.path) {
+          urlLookup.set(doc.title.toLowerCase(), { path: doc.path, type: doc.type, source: doc.source, owner: doc.owner });
+        }
+      }
+
       // Deduplicate scanned results
       const seen = new Set<string>();
       const scanned: Array<{ title: string; path: string; type: string; source: string; owner?: string }> = [];
@@ -178,7 +188,13 @@ export const useDocStore = create<DocStore>((set, get) => ({
       const existingKeys = new Set(
         existing.map((d) => (d.url || d.title).toLowerCase())
       );
+      // Also index by title for matching
+      const existingByTitle = new Map<string, DocItem>();
+      for (const d of existing) {
+        existingByTitle.set(d.title.toLowerCase(), d);
+      }
 
+      let changed = false;
       const newDocs: DocItem[] = [];
       for (const doc of scanned) {
         const key = (doc.path || doc.title).toLowerCase();
@@ -196,23 +212,24 @@ export const useDocStore = create<DocStore>((set, get) => ({
             tags: [],
             notes: '',
           });
-        } else if (doc.owner) {
-          // Update sharedBy if we now have a resolved name
-          const match = existing.find((d) => (d.url || d.title).toLowerCase() === key);
-          if (match && !match.sharedBy) {
-            match.sharedBy = doc.owner;
-          }
         }
       }
 
-      if (newDocs.length > 0) {
+      // Enrich existing docs: fill in missing URLs, sharedBy, type, source
+      for (const d of existing) {
+        const lookup = urlLookup.get(d.title.toLowerCase());
+        if (lookup) {
+          if (!d.url && lookup.path) { d.url = lookup.path; changed = true; }
+          if (!d.sharedBy && lookup.owner) { d.sharedBy = lookup.owner; changed = true; }
+          if (d.type === 'other' && lookup.type !== 'other') { d.type = lookup.type as DocItem['type']; changed = true; }
+          if (d.source === 'other' && lookup.source !== 'other') { d.source = lookup.source as DocItem['source']; changed = true; }
+        }
+      }
+
+      if (newDocs.length > 0 || changed) {
         const docs = [...existing, ...newDocs];
         set({ docs });
         persist(docs);
-      } else if (scanned.some((s) => s.owner)) {
-        // Persist updated sharedBy names
-        set({ docs: [...existing] });
-        persist(existing);
       }
     } catch (err) {
       console.error('autoImport failed:', err);
