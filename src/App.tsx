@@ -155,10 +155,71 @@ function AppContent() {
           }
         }
       }
+
+      // Ctrl+V paste a URL to add a doc
+      if (e.ctrlKey && e.key === 'v') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+        (async () => {
+          try {
+            // Try HTML first for rich link text
+            let title = '';
+            try {
+              const items = await navigator.clipboard.read();
+              for (const item of items) {
+                if (item.types.includes('text/html')) {
+                  const blob = await item.getType('text/html');
+                  const html = await blob.text();
+                  const match = html.match(/<a[^>]*>([^<]+)<\/a>/i);
+                  if (match) title = match[1].replace(/\.[^.]+$/, '').trim();
+                }
+              }
+            } catch {}
+
+            const text = await navigator.clipboard.readText();
+            const trimmed = text.trim();
+            if (!trimmed.startsWith('http')) return;
+
+            const exists = useDocStore.getState().docs.some(
+              (d) => d.url.toLowerCase() === trimmed.toLowerCase()
+            );
+            if (exists) return;
+
+            if (!title) {
+              try {
+                const u = new URL(trimmed);
+                const parts = u.pathname.split('/');
+                const fname = parts[parts.length - 1];
+                if (fname && !fname.match(/^[A-Za-z0-9_-]{20,}$/)) {
+                  title = decodeURIComponent(fname).replace(/\.[^.]+$/, '').replace(/%20/g, ' ');
+                }
+                if (!title) {
+                  const file = u.searchParams.get('file') || u.searchParams.get('sourcedoc');
+                  if (file) title = decodeURIComponent(file).replace(/\.[^.]+$/, '');
+                }
+              } catch {}
+            }
+            if (!title) title = 'Untitled Document';
+
+            const type = detectTypeFromUrl(title) !== 'other'
+              ? detectTypeFromUrl(title)
+              : detectTypeFromUrl(trimmed);
+
+            addDoc({
+              title,
+              url: trimmed,
+              type,
+              source: detectSourceFromUrl(trimmed),
+              sharedBy: '',
+            });
+          } catch {}
+        })();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [setAddDialogOpen, getFilteredDocs, setSelectedDocId]);
+  }, [setAddDialogOpen, getFilteredDocs, setSelectedDocId, addDoc]);
 
   // Drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -177,13 +238,56 @@ function AppContent() {
       e.preventDefault();
       setIsDragging(false);
 
-      const text = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
-      if (text && text.startsWith('http')) {
+      // Try to get the link text from HTML (e.g. dragged from Teams/browser)
+      const html = e.dataTransfer.getData('text/html');
+      const url = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
+
+      if (url && url.trim().startsWith('http')) {
+        const trimmedUrl = url.trim();
+
+        // Extract title: prefer HTML anchor text, then URL filename
+        let title = '';
+        if (html) {
+          // Parse anchor text from HTML like <a href="...">Readable Title.docx</a>
+          const match = html.match(/<a[^>]*>([^<]+)<\/a>/i);
+          if (match) {
+            title = match[1].replace(/\.[^.]+$/, '').trim();
+          }
+        }
+        if (!title) {
+          // Try to get a readable name from the URL path
+          try {
+            const u = new URL(trimmedUrl);
+            const parts = u.pathname.split('/');
+            const fname = parts[parts.length - 1];
+            if (fname && !fname.match(/^[A-Za-z0-9_-]{20,}$/)) {
+              // Only use if it looks like a real filename, not an encoded ID
+              title = decodeURIComponent(fname).replace(/\.[^.]+$/, '').replace(/%20/g, ' ');
+            }
+          } catch {}
+        }
+        if (!title) {
+          // For encoded SharePoint URLs, try query params
+          try {
+            const u = new URL(trimmedUrl);
+            const file = u.searchParams.get('file') || u.searchParams.get('sourcedoc');
+            if (file) {
+              title = decodeURIComponent(file).replace(/\.[^.]+$/, '');
+            }
+          } catch {}
+        }
+        if (!title) title = 'Untitled Document';
+
+        // Detect type from title (might have .docx) or URL
+        const type = detectTypeFromUrl(title) !== 'other'
+          ? detectTypeFromUrl(title)
+          : detectTypeFromUrl(trimmedUrl);
+
         addDoc({
-          title: text.split('/').pop()?.split('?')[0] || 'Untitled Document',
-          url: text,
-          type: detectTypeFromUrl(text),
-          source: detectSourceFromUrl(text),
+          title,
+          url: trimmedUrl,
+          type,
+          source: detectSourceFromUrl(trimmedUrl),
           sharedBy: '',
         });
         return;
@@ -193,7 +297,7 @@ function AppContent() {
       if (files.length > 0) {
         Array.from(files).forEach((file) => {
           addDoc({
-            title: file.name,
+            title: file.name.replace(/\.[^.]+$/, ''),
             url: '',
             type: detectTypeFromUrl(file.name),
             source: 'local',
