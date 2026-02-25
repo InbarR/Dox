@@ -137,6 +137,8 @@ export function DocCard({ doc }: DocCardProps) {
   const setStatus = useDocStore((s) => s.setStatus);
   const deleteDoc = useDocStore((s) => s.deleteDoc);
   const setReminderDialogDocId = useDocStore((s) => s.setReminderDialogDocId);
+  const categories = useDocStore((s) => s.categories);
+  const setDocCategory = useDocStore((s) => s.setCategory);
 
   const isSelected = selectedDocId === doc.id;
   const timeAgo = formatDistanceToNow(new Date(doc.dateAdded), { addSuffix: true });
@@ -187,6 +189,12 @@ export function DocCard({ doc }: DocCardProps) {
           {doc.title}
         </div>
         <div className={styles.subtitle}>
+          {doc.category && (
+            <>
+              <span style={{ color: '#6CB4EE', fontSize: '11px' }}>{doc.category}</span>
+              <span className={styles.dot}>&bull;</span>
+            </>
+          )}
           {SOURCE_LABELS[doc.source]}
           {owner && (
             <>
@@ -278,6 +286,24 @@ export function DocCard({ doc }: DocCardProps) {
                 {doc.pinned ? 'Unpin' : 'Pin to top'}
               </MenuItem>
               <MenuDivider />
+              {categories.length > 0 && (
+                <>
+                  {categories.map((cat) => (
+                    <MenuItem
+                      key={cat}
+                      onClick={() => setDocCategory(doc.id, doc.category === cat ? undefined : cat)}
+                    >
+                      {doc.category === cat ? '\u2713 ' : '  '}{cat}
+                    </MenuItem>
+                  ))}
+                  {doc.category && (
+                    <MenuItem onClick={() => setDocCategory(doc.id, undefined)}>
+                      Remove category
+                    </MenuItem>
+                  )}
+                  <MenuDivider />
+                </>
+              )}
               {STATUS_ORDER.map((s) => (
                 <MenuItem
                   key={s}

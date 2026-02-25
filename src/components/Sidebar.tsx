@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   makeStyles,
   tokens,
   Text,
   Button,
-  Badge,
-  Divider,
+  Input,
 } from '@fluentui/react-components';
 import {
   DocumentMultiple24Regular,
@@ -13,6 +12,9 @@ import {
   BookOpen24Regular,
   Warning24Regular,
   Checkmark24Regular,
+  FolderOpen24Regular,
+  Add16Regular,
+  Dismiss16Regular,
 } from '@fluentui/react-icons';
 import { FilterView } from '../types';
 import { useDocStore } from '../store/useDocStore';
@@ -83,12 +85,30 @@ export function Sidebar() {
   const styles = useStyles();
   const filterView = useDocStore((s) => s.filterView);
   const setFilterView = useDocStore((s) => s.setFilterView);
+  const filterCategory = useDocStore((s) => s.filterCategory);
+  const setFilterCategory = useDocStore((s) => s.setFilterCategory);
+  const categories = useDocStore((s) => s.categories);
+  const addCategory = useDocStore((s) => s.addCategory);
+  const removeCategory = useDocStore((s) => s.removeCategory);
   const docs = useDocStore((s) => s.docs);
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
 
   function getCount(view: FilterView): number {
     if (view === 'all') return docs.length;
     if (view === 'pinned') return docs.filter((d) => d.pinned).length;
     return docs.filter((d) => d.status === view).length;
+  }
+
+  function getCatCount(cat: string): number {
+    return docs.filter((d) => d.category === cat).length;
+  }
+
+  function handleAddCategory() {
+    const name = newCatName.trim();
+    if (name) addCategory(name);
+    setNewCatName('');
+    setAddingCat(false);
   }
 
   return (
@@ -110,7 +130,7 @@ export function Sidebar() {
               className={`${styles.navItem} ${
                 filterView === item.view ? styles.navItemActive : ''
               }`}
-              onClick={() => setFilterView(item.view)}
+              onClick={() => { setFilterView(item.view); setFilterCategory(null); }}
             >
               {item.label}
               {count > 0 && (
@@ -132,7 +152,7 @@ export function Sidebar() {
               className={`${styles.navItem} ${
                 filterView === item.view ? styles.navItemActive : ''
               }`}
-              onClick={() => setFilterView(item.view)}
+              onClick={() => { setFilterView(item.view); setFilterCategory(null); }}
             >
               {item.label}
               {count > 0 && (
@@ -141,6 +161,54 @@ export function Sidebar() {
             </Button>
           );
         })}
+
+        <div className={styles.sectionLabel}>Categories</div>
+
+        {categories.map((cat) => (
+          <Button
+            key={cat}
+            appearance="subtle"
+            icon={<FolderOpen24Regular />}
+            className={`${styles.navItem} ${
+              filterCategory === cat ? styles.navItemActive : ''
+            }`}
+            onClick={() => {
+              setFilterCategory(filterCategory === cat ? null : cat);
+              setFilterView('all');
+            }}
+          >
+            {cat}
+            <span className={styles.navBadge}>{getCatCount(cat)}</span>
+          </Button>
+        ))}
+
+        {addingCat ? (
+          <div style={{ padding: '4px 12px' }}>
+            <Input
+              size="small"
+              placeholder="Category name"
+              value={newCatName}
+              onChange={(_, data) => setNewCatName(data.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddCategory();
+                if (e.key === 'Escape') { setAddingCat(false); setNewCatName(''); }
+              }}
+              onBlur={handleAddCategory}
+              autoFocus
+              appearance="filled-darker"
+            />
+          </div>
+        ) : (
+          <Button
+            appearance="subtle"
+            icon={<Add16Regular />}
+            className={styles.navItem}
+            onClick={() => setAddingCat(true)}
+            size="small"
+          >
+            Add Category
+          </Button>
+        )}
       </nav>
     </div>
   );

@@ -12,8 +12,10 @@ import {
 
 interface DocStore {
   docs: DocItem[];
+  categories: string[];
   searchQuery: string;
   filterView: FilterView;
+  filterCategory: string | null;
   filterType: DocType | null;
   filterSource: DocSource | null;
   sortField: SortField;
@@ -21,6 +23,7 @@ interface DocStore {
   selectedDocId: string | null;
   addDialogOpen: boolean;
   reminderDialogDocId: string | null;
+  collapsedCategories: Set<string>;
 
   loadDocs: () => Promise<void>;
   addDoc: (
@@ -32,8 +35,13 @@ interface DocStore {
   cycleStatus: (id: string) => void;
   setStatus: (id: string, status: DocStatus) => void;
   setReminder: (id: string, reminder: string | undefined) => void;
+  setCategory: (id: string, category: string | undefined) => void;
+  addCategory: (name: string) => void;
+  removeCategory: (name: string) => void;
+  toggleCategoryCollapse: (name: string) => void;
   setSearchQuery: (query: string) => void;
   setFilterView: (view: FilterView) => void;
+  setFilterCategory: (category: string | null) => void;
   setFilterType: (type: DocType | null) => void;
   setFilterSource: (source: DocSource | null) => void;
   setSortField: (field: SortField) => void;
@@ -61,8 +69,10 @@ function persist(docs: DocItem[]) {
 
 export const useDocStore = create<DocStore>((set, get) => ({
   docs: [],
+  categories: [],
   searchQuery: '',
   filterView: 'all',
+  filterCategory: null,
   filterType: null,
   filterSource: null,
   sortField: 'dateAdded',
@@ -70,15 +80,20 @@ export const useDocStore = create<DocStore>((set, get) => ({
   selectedDocId: null,
   addDialogOpen: false,
   reminderDialogDocId: null,
+  collapsedCategories: new Set<string>(),
 
   loadDocs: async () => {
     const raw = await window.docshelf.loadDocs();
-    // Migrate old statuses
     const docs = (raw || []).map((d: any) => ({
       ...d,
       status: d.status === 'unread' || d.status === 'reviewed' ? 'new' : d.status,
     }));
-    set({ docs });
+    // Extract unique categories from docs
+    const cats = new Set<string>();
+    for (const d of docs) {
+      if (d.category) cats.add(d.category);
+    }
+    set({ docs, categories: [...cats].sort() });
   },
 
   addDoc: (input) => {
@@ -150,8 +165,44 @@ export const useDocStore = create<DocStore>((set, get) => ({
     persist(docs);
   },
 
+  setCategory: (id, category) => {
+    const docs = get().docs.map((d) =>
+      d.id === id ? { ...d, category } : d
+    );
+    // Update categories list
+    const cats = new Set(get().categories);
+    if (category) cats.add(category);
+    set({ docs, categories: [...cats].sort() });
+    persist(docs);
+  },
+
+  addCategory: (name) => {
+    const cats = new Set(get().categories);
+    cats.add(name);
+    set({ categories: [...cats].sort() });
+  },
+
+  removeCategory: (name) => {
+    // Remove category from list and unassign from all docs
+    const cats = new Set(get().categories);
+    cats.delete(name);
+    const docs = get().docs.map((d) =>
+      d.category === name ? { ...d, category: undefined } : d
+    );
+    set({ categories: [...cats].sort(), docs });
+    persist(docs);
+  },
+
+  toggleCategoryCollapse: (name) => {
+    const collapsed = new Set(get().collapsedCategories);
+    if (collapsed.has(name)) collapsed.delete(name);
+    else collapsed.add(name);
+    set({ collapsedCategories: collapsed });
+  },
+
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setFilterView: (filterView) => set({ filterView }),
+  setFilterCategory: (filterCategory) => set({ filterCategory }),
   setFilterType: (filterType) => set({ filterType }),
   setFilterSource: (filterSource) => set({ filterSource }),
   setSortField: (sortField) => set({ sortField }),
@@ -274,7 +325,7 @@ export const useDocStore = create<DocStore>((set, get) => ({
   },
 
   getFilteredDocs: () => {
-    const { docs, searchQuery, filterView, filterType, filterSource, sortField, sortDirection } =
+    const { docs, searchQuery, filterView, filterCategory, filterType, filterSource, sortField, sortDirection } =
       get();
 
     let filtered = [...docs];
@@ -284,6 +335,11 @@ export const useDocStore = create<DocStore>((set, get) => ({
       filtered = filtered.filter((d) => d.pinned);
     } else if (filterView !== 'all') {
       filtered = filtered.filter((d) => d.status === filterView);
+    }
+
+    // Filter by category
+    if (filterCategory) {
+      filtered = filtered.filter((d) => d.category === filterCategory);
     }
 
     // Filter by type

@@ -59,16 +59,37 @@ export function DocList() {
   const setAddDialogOpen = useDocStore((s) => s.setAddDialogOpen);
   // Subscribe to all state that affects filtering so we re-render on changes
   useDocStore((s) => s.filterView);
+  useDocStore((s) => s.filterCategory);
   useDocStore((s) => s.filterType);
   useDocStore((s) => s.filterSource);
   useDocStore((s) => s.searchQuery);
   useDocStore((s) => s.sortField);
   useDocStore((s) => s.sortDirection);
   useDocStore((s) => s.docs);
+  const categories = useDocStore((s) => s.categories);
+  const collapsedCategories = useDocStore((s) => s.collapsedCategories);
+  const toggleCategoryCollapse = useDocStore((s) => s.toggleCategoryCollapse);
+  const filterCategory = useDocStore((s) => s.filterCategory);
   const docs = getFilteredDocs();
 
   const pinned = docs.filter((d) => d.pinned);
   const unpinned = docs.filter((d) => !d.pinned);
+
+  // Group unpinned docs by category
+  const hasCategories = categories.length > 0 && !filterCategory;
+  const grouped = new Map<string, typeof docs>();
+  if (hasCategories) {
+    for (const cat of categories) {
+      grouped.set(cat, []);
+    }
+    grouped.set('', []); // uncategorized
+    for (const doc of unpinned) {
+      const key = doc.category || '';
+      const list = grouped.get(key) || [];
+      list.push(doc);
+      grouped.set(key, list);
+    }
+  }
 
   if (docs.length === 0) {
     return (
@@ -98,7 +119,29 @@ export function DocList() {
         </>
       )}
 
-      {unpinned.length > 0 && (
+      {hasCategories ? (
+        <>
+          {[...grouped.entries()].map(([cat, catDocs]) => {
+            if (catDocs.length === 0) return null;
+            const label = cat || 'Uncategorized';
+            const isCollapsed = collapsedCategories.has(label);
+            return (
+              <React.Fragment key={label}>
+                <div
+                  className={styles.sectionHeader}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => toggleCategoryCollapse(label)}
+                >
+                  {isCollapsed ? '\u25B6' : '\u25BC'} {label} ({catDocs.length})
+                </div>
+                {!isCollapsed && catDocs.map((doc) => (
+                  <DocCard key={doc.id} doc={doc} />
+                ))}
+              </React.Fragment>
+            );
+          })}
+        </>
+      ) : unpinned.length > 0 ? (
         <>
           {pinned.length > 0 && (
             <div className={styles.sectionHeader}>
@@ -109,7 +152,7 @@ export function DocList() {
             <DocCard key={doc.id} doc={doc} />
           ))}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

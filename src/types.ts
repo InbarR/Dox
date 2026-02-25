@@ -29,6 +29,7 @@ export interface DocItem {
   notes: string;
   reminder?: string;
   openIn?: string;
+  category?: string;
 }
 
 export type FilterView =
