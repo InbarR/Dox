@@ -185,14 +185,13 @@ export function DocCard({ doc }: DocCardProps) {
             <span style={{
               color: '#4CAF50',
               fontSize: '11px',
-              fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
               gap: '3px',
               marginLeft: '2px',
             }}>
               <span style={{ fontSize: '8px' }}>{'\u25CF'}</span>
-              Open in {doc.openIn}
+              {doc.openIn}
             </span>
           )}
           {doc.reminder && (
