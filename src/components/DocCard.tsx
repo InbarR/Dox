@@ -158,6 +158,7 @@ export function DocCard({ doc }: DocCardProps) {
   return (
     <div
       className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
+      data-doc-id={doc.id}
       onClick={() => setSelectedDocId(isSelected ? null : doc.id)}
       onDoubleClick={(e) => {
         e.stopPropagation();

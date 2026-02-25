@@ -105,17 +105,60 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [docs, setReminder]);
 
+  const getFilteredDocs = useDocStore((s) => s.getFilteredDocs);
+  const setSelectedDocId = useDocStore((s) => s.setSelectedDocId);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
         setAddDialogOpen(true);
+        return;
+      }
+
+      // Arrow key navigation through document list
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const filteredDocs = getFilteredDocs();
+        if (filteredDocs.length === 0) return;
+
+        const currentId = useDocStore.getState().selectedDocId;
+        const currentIdx = currentId
+          ? filteredDocs.findIndex((d) => d.id === currentId)
+          : -1;
+
+        let nextIdx: number;
+        if (e.key === 'ArrowDown') {
+          nextIdx = currentIdx < filteredDocs.length - 1 ? currentIdx + 1 : 0;
+        } else {
+          nextIdx = currentIdx > 0 ? currentIdx - 1 : filteredDocs.length - 1;
+        }
+
+        e.preventDefault();
+        setSelectedDocId(filteredDocs[nextIdx].id);
+
+        // Scroll the selected item into view
+        setTimeout(() => {
+          const el = document.querySelector(`[data-doc-id="${filteredDocs[nextIdx].id}"]`);
+          el?.scrollIntoView({ block: 'nearest' });
+        }, 0);
+      }
+
+      // Enter opens the selected doc
+      if (e.key === 'Enter' && !e.ctrlKey) {
+        const currentId = useDocStore.getState().selectedDocId;
+        if (currentId) {
+          const doc = useDocStore.getState().docs.find((d) => d.id === currentId);
+          if (doc?.url) {
+            e.preventDefault();
+            window.docshelf.openExternal(doc.url).catch(() => {});
+          }
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [setAddDialogOpen]);
+  }, [setAddDialogOpen, getFilteredDocs, setSelectedDocId]);
 
   // Drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
