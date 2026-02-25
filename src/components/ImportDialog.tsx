@@ -242,7 +242,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
         const key = (doc.path || doc.title).toLowerCase();
         if (!seen.has(key)) {
           seen.add(key);
-          merged.push({ title: doc.title, path: doc.path, type: doc.type, source: doc.source });
+          merged.push({ title: doc.title, path: doc.path, type: doc.type, source: doc.source, sharedBy: doc.owner });
         }
       }
       setItems(toImportItems(merged, 'all'));

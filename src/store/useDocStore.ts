@@ -42,6 +42,7 @@ interface DocStore {
   setAddDialogOpen: (open: boolean) => void;
   setReminderDialogDocId: (id: string | null) => void;
   refreshOpenStatus: () => Promise<void>;
+  autoImport: () => Promise<void>;
   getFilteredDocs: () => DocItem[];
 }
 
@@ -153,6 +154,70 @@ export const useDocStore = create<DocStore>((set, get) => ({
   setSelectedDocId: (selectedDocId) => set({ selectedDocId }),
   setAddDialogOpen: (addDialogOpen) => set({ addDialogOpen }),
   setReminderDialogDocId: (reminderDialogDocId) => set({ reminderDialogDocId }),
+
+  autoImport: async () => {
+    try {
+      const [openDocs, recentDocs] = await Promise.all([
+        window.docshelf.scanOpenDocs(),
+        window.docshelf.scanRecentDocs(),
+      ]);
+
+      // Deduplicate scanned results
+      const seen = new Set<string>();
+      const scanned: Array<{ title: string; path: string; type: string; source: string; owner?: string }> = [];
+      for (const doc of [...openDocs, ...recentDocs]) {
+        const key = (doc.path || doc.title).toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          scanned.push(doc);
+        }
+      }
+
+      // Find docs not already in the store
+      const existing = get().docs;
+      const existingKeys = new Set(
+        existing.map((d) => (d.url || d.title).toLowerCase())
+      );
+
+      const newDocs: DocItem[] = [];
+      for (const doc of scanned) {
+        const key = (doc.path || doc.title).toLowerCase();
+        if (!existingKeys.has(key)) {
+          newDocs.push({
+            id: uuidv4(),
+            title: doc.title,
+            url: doc.path,
+            type: doc.type as DocItem['type'],
+            source: doc.source as DocItem['source'],
+            sharedBy: doc.owner || '',
+            dateAdded: new Date().toISOString(),
+            pinned: false,
+            status: 'unread',
+            tags: [],
+            notes: '',
+          });
+        } else if (doc.owner) {
+          // Update sharedBy if we now have a resolved name
+          const match = existing.find((d) => (d.url || d.title).toLowerCase() === key);
+          if (match && !match.sharedBy) {
+            match.sharedBy = doc.owner;
+          }
+        }
+      }
+
+      if (newDocs.length > 0) {
+        const docs = [...existing, ...newDocs];
+        set({ docs });
+        persist(docs);
+      } else if (scanned.some((s) => s.owner)) {
+        // Persist updated sharedBy names
+        set({ docs: [...existing] });
+        persist(existing);
+      }
+    } catch (err) {
+      console.error('autoImport failed:', err);
+    }
+  },
 
   refreshOpenStatus: async () => {
     try {

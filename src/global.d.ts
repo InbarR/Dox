@@ -6,6 +6,7 @@ interface ScannedDoc {
   type: 'doc' | 'ppt' | 'xls' | 'pdf' | 'other';
   source: 'sharepoint' | 'onedrive' | 'local' | 'teams' | 'other';
   app?: string;
+  owner?: string;
 }
 
 interface GraphDoc {

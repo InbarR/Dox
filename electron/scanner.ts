@@ -12,6 +12,62 @@ export interface ScannedDoc {
   type: 'doc' | 'ppt' | 'xls' | 'pdf' | 'other';
   source: 'sharepoint' | 'onedrive' | 'local' | 'teams' | 'other';
   app?: string;
+  owner?: string;
+}
+
+// ── AD Name Resolution Cache ────────────────────────────────────────
+const nameCache = new Map<string, string>();
+
+function extractAliasFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const match = u.pathname.match(/\/personal\/([^_/]+)/i);
+    return match ? match[1].toLowerCase() : null;
+  } catch { return null; }
+}
+
+function extractTeamFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const match = u.pathname.match(/\/(teams|sites)\/([^/]+)/i);
+    return match ? match[2] : null;
+  } catch { return null; }
+}
+
+async function resolveAliases(aliases: string[]): Promise<Map<string, string>> {
+  const toResolve = aliases.filter(a => !nameCache.has(a));
+  if (toResolve.length === 0) return nameCache;
+
+  const script = `
+$aliases = @(${toResolve.map(a => `'${a}'`).join(',')})
+$results = @()
+foreach ($alias in $aliases) {
+  try {
+    $s = [adsisearcher]"(samaccountname=$alias)"
+    $r = $s.FindOne()
+    if ($r -and $r.Properties['displayname']) {
+      $results += [PSCustomObject]@{ Alias = $alias; Name = ($r.Properties['displayname'][0]) }
+    }
+  } catch {}
+}
+if ($results.Count -eq 0) { Write-Output '[]' }
+elseif ($results.Count -eq 1) { Write-Output (ConvertTo-Json @($results) -Compress) }
+else { Write-Output ($results | ConvertTo-Json -Compress) }
+`;
+
+  try {
+    const stdout = await runPowerShell(script, false);
+    const items = parseJsonOutput(stdout);
+    for (const item of items) {
+      if (item.Alias && item.Name) {
+        nameCache.set(item.Alias.toLowerCase(), item.Name);
+      }
+    }
+  } catch (err) {
+    log('AD resolve failed: ' + (err as Error).message);
+  }
+
+  return nameCache;
 }
 
 function detectSource(filePath: string): ScannedDoc['source'] {
@@ -302,12 +358,38 @@ elseif ($allResults.Count -eq 1) { Write-Output (ConvertTo-Json @($allResults) -
 else { Write-Output ($allResults | ConvertTo-Json -Compress) }
 `;
 
+async function enrichWithNames(docs: ScannedDoc[]): Promise<ScannedDoc[]> {
+  // Collect all aliases to resolve
+  const aliases = new Set<string>();
+  for (const doc of docs) {
+    const alias = extractAliasFromUrl(doc.path);
+    if (alias) aliases.add(alias);
+  }
+
+  if (aliases.size > 0) {
+    await resolveAliases([...aliases]);
+  }
+
+  // Set owner from AD cache or team name
+  return docs.map((doc) => {
+    const alias = extractAliasFromUrl(doc.path);
+    if (alias && nameCache.has(alias)) {
+      return { ...doc, owner: nameCache.get(alias) };
+    }
+    const team = extractTeamFromUrl(doc.path);
+    if (team) {
+      return { ...doc, owner: team };
+    }
+    return doc;
+  });
+}
+
 export async function scanOpenDocs(): Promise<ScannedDoc[]> {
   try {
     const stdout = await runPowerShell(OPEN_DOCS_SCRIPT, true);
     const items = parseJsonOutput(stdout);
 
-    return items
+    const docs = items
       .filter((item: any) => item.Title)
       .map((item: any) => ({
         title: item.Title || extractTitle(item.Path || ''),
@@ -316,6 +398,8 @@ export async function scanOpenDocs(): Promise<ScannedDoc[]> {
         source: item.Path ? detectSource(item.Path) : 'other',
         app: item.App,
       }));
+
+    return enrichWithNames(docs);
   } catch (err) {
     console.error('scanOpenDocs failed:', err);
     return [];
@@ -391,7 +475,7 @@ export async function scanRecentDocs(): Promise<ScannedDoc[]> {
       });
     }
 
-    return results;
+    return enrichWithNames(results);
   } catch (err) {
     console.error('scanRecentDocs failed:', err);
     return [];

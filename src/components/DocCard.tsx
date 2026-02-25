@@ -92,31 +92,19 @@ const useStyles = makeStyles({
   },
 });
 
-/** Extract owner name from SharePoint URL path */
-function extractOwner(url: string): string {
+/** Extract owner fallback from SharePoint URL if sharedBy is empty */
+function extractOwnerFallback(url: string): string {
   if (!url) return '';
   try {
     const u = new URL(url);
     const path = u.pathname;
-
-    // Personal OneDrive: /personal/{alias}_{domain_com}/
-    const personalMatch = path.match(/\/personal\/([^/]+)/i);
+    const personalMatch = path.match(/\/personal\/([^_/]+)/i);
     if (personalMatch) {
-      // Strip domain suffix (e.g. _microsoft_com, _ntdev_microsoft_com)
-      const alias = personalMatch[1]
-        .replace(/_(?:microsoft|msft|ntdev|hotmail|outlook|live|google|gmail|yahoo).*$/i, '')
-        .toLowerCase();
-      if (alias) {
-        return alias.charAt(0).toUpperCase() + alias.slice(1);
-      }
+      const alias = personalMatch[1].toLowerCase();
+      return alias.charAt(0).toUpperCase() + alias.slice(1);
     }
-
-    // Team site: /teams/TeamName/ or /sites/SiteName/
     const teamMatch = path.match(/\/(teams|sites)\/([^/]+)/i);
-    if (teamMatch) {
-      // Keep original casing, just clean up dashes
-      return teamMatch[2].replace(/-/g, ' ');
-    }
+    if (teamMatch) return teamMatch[2].replace(/-/g, ' ');
   } catch { /* ignore */ }
   return '';
 }
@@ -150,7 +138,7 @@ export function DocCard({ doc }: DocCardProps) {
 
   const isSelected = selectedDocId === doc.id;
   const timeAgo = formatDistanceToNow(new Date(doc.dateAdded), { addSuffix: true });
-  const owner = doc.sharedBy || extractOwner(doc.url);
+  const owner = doc.sharedBy || extractOwnerFallback(doc.url);
   const desktopUrl = getDesktopAppUrl(doc.url, doc.type);
 
   const handleOpenBrowser = () => {

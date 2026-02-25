@@ -73,17 +73,20 @@ function AppContent() {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   const refreshOpenStatus = useDocStore((s) => s.refreshOpenStatus);
+  const autoImport = useDocStore((s) => s.autoImport);
 
-  // Load docs on mount, then check which are open
+  // Load docs on mount, then auto-import new ones and check open status
   useEffect(() => {
-    loadDocs().then(() => refreshOpenStatus());
-  }, [loadDocs, refreshOpenStatus]);
+    loadDocs().then(() => autoImport().then(() => refreshOpenStatus()));
+  }, [loadDocs, autoImport, refreshOpenStatus]);
 
-  // Periodically refresh open status (every 60s)
+  // Periodically scan for new docs and refresh open status (every 2 min)
   useEffect(() => {
-    const interval = setInterval(() => refreshOpenStatus(), 60000);
+    const interval = setInterval(() => {
+      autoImport().then(() => refreshOpenStatus());
+    }, 120000);
     return () => clearInterval(interval);
-  }, [refreshOpenStatus]);
+  }, [autoImport, refreshOpenStatus]);
 
   // Reminder checker
   useEffect(() => {
