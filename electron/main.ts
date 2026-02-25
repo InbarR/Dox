@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { scanRecentDocs, scanOpenDocs } from './scanner';
 import { scanBrowserTabs } from './browser-tabs';
+import { streamChat } from './ai-chat';
 import {
   graphLogin,
   graphGetAllDocs,
@@ -121,6 +122,17 @@ ipcMain.handle('scan-browser-tabs', async () => {
     return await scanBrowserTabs();
   } catch {
     return [];
+  }
+});
+
+// AI Chat IPC
+ipcMain.handle('chat-send', async (_event, messages: Array<{ role: string; content: string }>) => {
+  if (!mainWindow) return { error: 'No window' };
+  try {
+    await streamChat(messages as any, mainWindow);
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err.message || 'Chat failed' };
   }
 });
 

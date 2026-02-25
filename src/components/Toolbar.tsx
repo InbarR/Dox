@@ -18,6 +18,7 @@ import {
   ArrowDownload24Regular,
   Navigation24Regular,
   ArrowSync24Regular,
+  Chat24Regular,
 } from '@fluentui/react-icons';
 import { useDocStore } from '../store/useDocStore';
 import { DocType, TYPE_LABELS, SortField } from '../types';
@@ -25,6 +26,7 @@ import { DocType, TYPE_LABELS, SortField } from '../types';
 interface ToolbarProps {
   onOpenImport: () => void;
   onRefresh: () => void;
+  onToggleChat: () => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 }
@@ -73,7 +75,7 @@ const SORT_OPTIONS: { field: SortField; label: string }[] = [
   { field: 'sharedBy', label: 'Shared By' },
 ];
 
-export function Toolbar({ onOpenImport, onRefresh, sidebarOpen, onToggleSidebar }: ToolbarProps) {
+export function Toolbar({ onOpenImport, onRefresh, onToggleChat, sidebarOpen, onToggleSidebar }: ToolbarProps) {
   const styles = useStyles();
   const searchQuery = useDocStore((s) => s.searchQuery);
   const setSearchQuery = useDocStore((s) => s.setSearchQuery);
@@ -187,6 +189,14 @@ export function Toolbar({ onOpenImport, onRefresh, sidebarOpen, onToggleSidebar 
         >
           Import
         </Button>
+
+        <Button
+          appearance="subtle"
+          icon={<Chat24Regular />}
+          onClick={onToggleChat}
+          title="Dox AI Chat"
+          size="small"
+        />
 
         <Button
           appearance="primary"

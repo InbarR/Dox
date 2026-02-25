@@ -13,6 +13,7 @@ import { DocDetails } from './components/DocDetails';
 import { AddDocDialog } from './components/AddDocDialog';
 import { ReminderDialog } from './components/ReminderDialog';
 import { ImportDialog } from './components/ImportDialog';
+import { ChatPanel } from './components/ChatPanel';
 import { detectTypeFromUrl, detectSourceFromUrl } from './utils/fileIcons';
 
 const useStyles = makeStyles({
@@ -71,6 +72,7 @@ function AppContent() {
   const [isDragging, setIsDragging] = React.useState(false);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [chatOpen, setChatOpen] = React.useState(false);
 
   const refreshOpenStatus = useDocStore((s) => s.refreshOpenStatus);
   const autoImport = useDocStore((s) => s.autoImport);
@@ -333,12 +335,14 @@ function AppContent() {
         <Toolbar
           onOpenImport={() => setImportDialogOpen(true)}
           onRefresh={() => autoImport().then(() => refreshOpenStatus())}
+          onToggleChat={() => setChatOpen(!chatOpen)}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
         <div className={styles.body}>
           <DocList />
-          {selectedDocId && <DocDetails />}
+          {selectedDocId && !chatOpen && <DocDetails />}
+          {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
         </div>
       </div>
 
