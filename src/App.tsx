@@ -355,17 +355,15 @@ function AppContent() {
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
         <div className={styles.body}>
-          <div className={styles.listColumn}>
-            <DocList />
-            {selectedDocId && chatOpen && (
-              <div className={styles.detailsBar}>
-                <DocDetails />
-              </div>
-            )}
-          </div>
+          <DocList />
           {selectedDocId && !chatOpen && <DocDetails />}
           {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
         </div>
+        {selectedDocId && chatOpen && (
+          <div className={styles.detailsBar}>
+            <DocDetails />
+          </div>
+        )}
       </div>
 
       {isDragging && (
