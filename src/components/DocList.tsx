@@ -63,6 +63,7 @@ export function DocList() {
   useDocStore((s) => s.filterType);
   useDocStore((s) => s.filterSource);
   useDocStore((s) => s.searchQuery);
+  useDocStore((s) => s.chatFilterIds);
   useDocStore((s) => s.sortField);
   useDocStore((s) => s.sortDirection);
   useDocStore((s) => s.docs);

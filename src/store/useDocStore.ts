@@ -14,6 +14,7 @@ interface DocStore {
   docs: DocItem[];
   categories: string[];
   searchQuery: string;
+  chatFilterIds: string[] | null;
   filterView: FilterView;
   filterCategory: string | null;
   filterType: DocType | null;
@@ -40,6 +41,7 @@ interface DocStore {
   removeCategory: (name: string) => void;
   toggleCategoryCollapse: (name: string) => void;
   setSearchQuery: (query: string) => void;
+  setChatFilterIds: (ids: string[] | null) => void;
   setFilterView: (view: FilterView) => void;
   setFilterCategory: (category: string | null) => void;
   setFilterType: (type: DocType | null) => void;
@@ -71,6 +73,7 @@ export const useDocStore = create<DocStore>((set, get) => ({
   docs: [],
   categories: [],
   searchQuery: '',
+  chatFilterIds: null,
   filterView: 'all',
   filterCategory: null,
   filterType: null,
@@ -217,7 +220,8 @@ export const useDocStore = create<DocStore>((set, get) => ({
     set({ collapsedCategories: collapsed });
   },
 
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
+  setSearchQuery: (searchQuery) => set({ searchQuery, chatFilterIds: null }),
+  setChatFilterIds: (chatFilterIds) => set({ chatFilterIds }),
   setFilterView: (filterView) => set({ filterView }),
   setFilterCategory: (filterCategory) => set({ filterCategory }),
   setFilterType: (filterType) => set({ filterType }),
@@ -342,10 +346,16 @@ export const useDocStore = create<DocStore>((set, get) => ({
   },
 
   getFilteredDocs: () => {
-    const { docs, searchQuery, filterView, filterCategory, filterType, filterSource, sortField, sortDirection } =
+    const { docs, searchQuery, chatFilterIds, filterView, filterCategory, filterType, filterSource, sortField, sortDirection } =
       get();
 
     let filtered = [...docs];
+
+    // AI chat filter - takes priority
+    if (chatFilterIds && chatFilterIds.length > 0) {
+      const idSet = new Set(chatFilterIds);
+      filtered = filtered.filter((d) => idSet.has(d.id));
+    }
 
     // Filter by view
     if (filterView === 'pinned') {

@@ -126,6 +126,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const selectedDocId = useDocStore((s) => s.selectedDocId);
   const setSelectedDocId = useDocStore((s) => s.setSelectedDocId);
   const setSearchQuery = useDocStore((s) => s.setSearchQuery);
+  const setChatFilterIds = useDocStore((s) => s.setChatFilterIds);
   const selectedDoc = docs.find((d) => d.id === selectedDocId);
 
   useEffect(() => {
@@ -308,7 +309,7 @@ Be concise. Help find, summarize, and manage documents.`;
     } else if (result.reply) {
       setMessages((prev) => [...prev, { role: 'assistant', content: result.reply! }]);
 
-      // Auto-filter the doc list to show mentioned docs
+      // Filter the doc list to show only mentioned docs
       const mentioned: string[] = [];
       const boldRegex = /\*\*([^*]+)\*\*/g;
       let m;
@@ -317,16 +318,8 @@ Be concise. Help find, summarize, and manage documents.`;
         if (doc) mentioned.push(doc.id);
       }
       if (mentioned.length > 0) {
-        // Build a search query that matches the mentioned docs
-        const titles = mentioned
-          .map((id) => docs.find((d) => d.id === id)?.title)
-          .filter(Boolean);
-        if (titles.length === 1) {
-          setSearchQuery(titles[0]!);
-        } else if (titles.length > 1) {
-          // Find a common substring or use the first few words of the query
-          setSearchQuery(text);
-        }
+        setChatFilterIds(mentioned);
+        setSearchQuery('');
       }
     }
     setStreaming(false);
@@ -344,7 +337,7 @@ Be concise. Help find, summarize, and manage documents.`;
               appearance="subtle"
               size="small"
               icon={<ArrowReset24Regular />}
-              onClick={() => setMessages([])}
+              onClick={() => { setMessages([]); setChatFilterIds(null); }}
               title="New session"
             />
           )}

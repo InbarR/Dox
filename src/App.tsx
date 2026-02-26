@@ -430,7 +430,7 @@ function AppContent() {
           <div className={styles.body}>
             <DocList />
             {selectedDocId && <DocDetails />}
-            {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
+            {chatOpen && <ChatPanel onClose={() => { setChatOpen(false); useDocStore.getState().setChatFilterIds(null); }} />}
           </div>
         </div>
       </div>
