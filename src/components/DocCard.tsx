@@ -15,8 +15,7 @@ import {
   MoreHorizontal24Regular,
   Pin24Regular,
   Pin24Filled,
-  Globe24Regular,
-  AppGeneric24Regular,
+  Open24Regular,
   Link24Regular,
   Delete24Regular,
   Clock24Regular,
@@ -111,18 +110,6 @@ function extractOwnerFallback(url: string): string {
   return '';
 }
 
-/** Build ms-office protocol URL for opening in desktop app */
-function getDesktopAppUrl(url: string, type: string): string | null {
-  if (!url || !url.startsWith('http')) return null;
-  const protocols: Record<string, string> = {
-    doc: 'ms-word',
-    xls: 'ms-excel',
-    ppt: 'ms-powerpoint',
-  };
-  const proto = protocols[type];
-  if (!proto) return null;
-  return `${proto}:ofe|u|${url}`;
-}
 
 interface DocCardProps {
   doc: DocItem;
@@ -143,16 +130,9 @@ export function DocCard({ doc }: DocCardProps) {
   const isSelected = selectedDocId === doc.id;
   const timeAgo = formatDistanceToNow(new Date(doc.dateAdded), { addSuffix: true });
   const owner = doc.sharedBy || extractOwnerFallback(doc.url);
-  const desktopUrl = getDesktopAppUrl(doc.url, doc.type);
-
-  const handleOpenBrowser = () => {
+  const handleOpen = () => {
     if (!doc.url) return;
     window.docshelf.openExternal(doc.url).catch(() => {});
-  };
-
-  const handleOpenApp = () => {
-    if (!desktopUrl) return;
-    window.docshelf.openExternal(desktopUrl).catch(() => {});
   };
 
   const handleCopyLink = () => {
@@ -178,7 +158,7 @@ export function DocCard({ doc }: DocCardProps) {
       onClick={() => setSelectedDocId(isSelected ? null : doc.id)}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        handleOpenBrowser();
+        handleOpen();
       }}
     >
       <FileTypeIcon type={doc.type} />
@@ -225,28 +205,15 @@ export function DocCard({ doc }: DocCardProps) {
 
       <div className={styles.actions}>
         {doc.url && (
-          <>
-            <Tooltip content="Open in browser" relationship="label">
-              <Button
-                className={styles.actionBtn}
-                appearance="subtle"
-                size="small"
-                icon={<Globe24Regular />}
-                onClick={(e) => { e.stopPropagation(); handleOpenBrowser(); }}
-              />
-            </Tooltip>
-            {desktopUrl && (
-              <Tooltip content="Open in desktop app" relationship="label">
-                <Button
-                  className={styles.actionBtn}
-                  appearance="subtle"
-                  size="small"
-                  icon={<AppGeneric24Regular />}
-                  onClick={(e) => { e.stopPropagation(); handleOpenApp(); }}
-                />
-              </Tooltip>
-            )}
-          </>
+          <Tooltip content="Open" relationship="label">
+            <Button
+              className={styles.actionBtn}
+              appearance="subtle"
+              size="small"
+              icon={<Open24Regular />}
+              onClick={(e) => { e.stopPropagation(); handleOpen(); }}
+            />
+          </Tooltip>
         )}
 
         <StatusBadge status={doc.status} onClick={() => cycleStatus(doc.id)} />
@@ -262,14 +229,9 @@ export function DocCard({ doc }: DocCardProps) {
           </MenuTrigger>
           <MenuPopover>
             <MenuList>
-              <MenuItem icon={<Globe24Regular />} onClick={handleOpenBrowser}>
-                Open in Browser
+              <MenuItem icon={<Open24Regular />} onClick={handleOpen}>
+                Open
               </MenuItem>
-              {desktopUrl && (
-                <MenuItem icon={<AppGeneric24Regular />} onClick={handleOpenApp}>
-                  Open in App
-                </MenuItem>
-              )}
               <MenuItem icon={<Link24Regular />} onClick={handleCopyLink}>
                 Copy Link
               </MenuItem>
