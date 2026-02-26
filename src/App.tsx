@@ -19,9 +19,15 @@ import { detectTypeFromUrl, detectSourceFromUrl } from './utils/fileIcons';
 const useStyles = makeStyles({
   root: {
     display: 'flex',
+    flexDirection: 'column',
     height: '100vh',
     backgroundColor: tokens.colorNeutralBackground1,
     color: tokens.colorNeutralForeground1,
+  },
+  topRow: {
+    flex: 1,
+    display: 'flex',
+    overflow: 'hidden',
   },
   main: {
     flex: 1,
@@ -343,28 +349,31 @@ function AppContent() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {sidebarOpen && <Sidebar />}
+      <div className={styles.topRow}>
+        {sidebarOpen && <Sidebar />}
 
-      <div className={styles.main}>
-        <div className={styles.dragBar} />
-        <Toolbar
-          onOpenImport={() => setImportDialogOpen(true)}
-          onRefresh={() => autoImport().then(() => refreshOpenStatus())}
-          onToggleChat={() => setChatOpen(!chatOpen)}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        />
-        <div className={styles.body}>
-          <DocList />
-          {selectedDocId && !chatOpen && <DocDetails />}
-          {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
-        </div>
-        {selectedDocId && chatOpen && (
-          <div className={styles.detailsBar}>
-            <DocDetails />
+        <div className={styles.main}>
+          <div className={styles.dragBar} />
+          <Toolbar
+            onOpenImport={() => setImportDialogOpen(true)}
+            onRefresh={() => autoImport().then(() => refreshOpenStatus())}
+            onToggleChat={() => setChatOpen(!chatOpen)}
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          />
+          <div className={styles.body}>
+            <DocList />
+            {selectedDocId && !chatOpen && <DocDetails />}
+            {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
           </div>
-        )}
+        </div>
       </div>
+
+      {selectedDocId && chatOpen && (
+        <div className={styles.detailsBar}>
+          <DocDetails />
+        </div>
+      )}
 
       {isDragging && (
         <div className={styles.dropOverlay}>
