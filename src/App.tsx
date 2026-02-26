@@ -4,7 +4,9 @@ import {
   webDarkTheme,
   makeStyles,
   tokens,
+  Button,
 } from '@fluentui/react-components';
+import { Dismiss24Regular } from '@fluentui/react-icons';
 import { useDocStore } from './store/useDocStore';
 import { Sidebar } from './components/Sidebar';
 import { Toolbar } from './components/Toolbar';
@@ -14,7 +16,8 @@ import { AddDocDialog } from './components/AddDocDialog';
 import { ReminderDialog } from './components/ReminderDialog';
 import { ImportDialog } from './components/ImportDialog';
 import { ChatPanel } from './components/ChatPanel';
-import { detectTypeFromUrl, detectSourceFromUrl } from './utils/fileIcons';
+import { FileTypeIcon, detectTypeFromUrl, detectSourceFromUrl } from './utils/fileIcons';
+import { SOURCE_LABELS } from './types';
 
 const useStyles = makeStyles({
   root: {
@@ -48,9 +51,29 @@ const useStyles = makeStyles({
     overflow: 'hidden',
   },
   detailsBar: {
-    maxHeight: '200px',
-    overflowY: 'auto',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    padding: '8px 20px',
     borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    flexShrink: 0,
+    fontSize: '13px',
+  },
+  detailsTitle: {
+    fontWeight: 600,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  detailsMeta: {
+    color: tokens.colorNeutralForeground4,
+    whiteSpace: 'nowrap',
+  },
+  detailsActions: {
+    display: 'flex',
+    gap: '4px',
+    marginLeft: 'auto',
     flexShrink: 0,
   },
   dragBar: {
@@ -79,6 +102,49 @@ const useStyles = makeStyles({
     pointerEvents: 'none',
   },
 });
+
+function BottomDetailsBar() {
+  const styles = useStyles();
+  const docs = useDocStore((s) => s.docs);
+  const selectedDocId = useDocStore((s) => s.selectedDocId);
+  const setSelectedDocId = useDocStore((s) => s.setSelectedDocId);
+  const togglePin = useDocStore((s) => s.togglePin);
+  const setReminderDialogDocId = useDocStore((s) => s.setReminderDialogDocId);
+  const doc = docs.find((d) => d.id === selectedDocId);
+  if (!doc) return null;
+
+  return (
+    <div className={styles.detailsBar}>
+      <FileTypeIcon type={doc.type} />
+      <span className={styles.detailsTitle}>{doc.title}</span>
+      <span className={styles.detailsMeta}>
+        {SOURCE_LABELS[doc.source]}
+        {doc.sharedBy && ` · ${doc.sharedBy}`}
+      </span>
+      <div className={styles.detailsActions}>
+        {doc.url && (
+          <Button size="small" appearance="subtle" onClick={() => window.docshelf.openExternal(doc.url)}>
+            Open
+          </Button>
+        )}
+        {doc.url && (
+          <Button size="small" appearance="subtle" onClick={() => navigator.clipboard.writeText(doc.url)}>
+            Copy Link
+          </Button>
+        )}
+        <Button size="small" appearance="subtle" onClick={() => togglePin(doc.id)}>
+          {doc.pinned ? 'Unpin' : 'Pin'}
+        </Button>
+        <Button
+          size="small"
+          appearance="subtle"
+          icon={<Dismiss24Regular />}
+          onClick={() => setSelectedDocId(null)}
+        />
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const styles = useStyles();
@@ -370,9 +436,7 @@ function AppContent() {
       </div>
 
       {selectedDocId && chatOpen && (
-        <div className={styles.detailsBar}>
-          <DocDetails />
-        </div>
+        <BottomDetailsBar />
       )}
 
       {isDragging && (
