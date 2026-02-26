@@ -78,9 +78,7 @@ ipcMain.handle('save-docs', (_event, docs) => saveDocs(docs));
 ipcMain.handle('open-external', async (_event, url: string) => {
   if (!url) return;
   try {
-    // Only encode literal spaces, don't touch anything else
-    const encoded = url.replace(/ /g, '%20');
-    await shell.openExternal(encoded);
+    await shell.openExternal(url);
   } catch (err) {
     console.error('Failed to open URL:', url, err);
   }

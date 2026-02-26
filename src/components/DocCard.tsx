@@ -111,18 +111,6 @@ function extractOwnerFallback(url: string): string {
   return '';
 }
 
-/** Convert path-based SharePoint URL to a working web URL */
-function getSharePointWebUrl(url: string): string {
-  try {
-    const u = new URL(url.replace(/%20/g, ' '));
-    if (u.hostname.includes('sharepoint.com')) {
-      const filePath = u.pathname;
-      return `${u.origin}/_layouts/15/Doc.aspx?sourcedoc=${encodeURIComponent(filePath)}&action=default`;
-    }
-  } catch {}
-  return url;
-}
-
 /** Build ms-office protocol URL for opening in desktop app */
 function getDesktopAppUrl(url: string, type: string): string | null {
   if (!url || !url.startsWith('http')) return null;
@@ -133,9 +121,7 @@ function getDesktopAppUrl(url: string, type: string): string | null {
   };
   const proto = protocols[type];
   if (!proto) return null;
-  // Use the SharePoint web URL which Word can resolve properly
-  const webUrl = getSharePointWebUrl(url);
-  return `${proto}:ofe|u|${webUrl}`;
+  return `${proto}:ofe|u|${url}`;
 }
 
 interface DocCardProps {
@@ -161,8 +147,7 @@ export function DocCard({ doc }: DocCardProps) {
 
   const handleOpenBrowser = () => {
     if (!doc.url) return;
-    const browserUrl = getSharePointWebUrl(doc.url);
-    window.docshelf.openExternal(browserUrl).catch(() => {});
+    window.docshelf.openExternal(doc.url).catch(() => {});
   };
 
   const handleOpenApp = () => {
