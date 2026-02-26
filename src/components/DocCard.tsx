@@ -111,6 +111,18 @@ function extractOwnerFallback(url: string): string {
   return '';
 }
 
+/** Convert path-based SharePoint URL to a working web URL */
+function getSharePointWebUrl(url: string): string {
+  try {
+    const u = new URL(url.replace(/%20/g, ' '));
+    if (u.hostname.includes('sharepoint.com')) {
+      const filePath = u.pathname;
+      return `${u.origin}/_layouts/15/Doc.aspx?sourcedoc=${encodeURIComponent(filePath)}&action=default`;
+    }
+  } catch {}
+  return url;
+}
+
 /** Build ms-office protocol URL for opening in desktop app */
 function getDesktopAppUrl(url: string, type: string): string | null {
   if (!url || !url.startsWith('http')) return null;
@@ -121,9 +133,9 @@ function getDesktopAppUrl(url: string, type: string): string | null {
   };
   const proto = protocols[type];
   if (!proto) return null;
-  // Encode spaces for the protocol URL
-  url = url.replace(/ /g, '%20');
-  return `${proto}:ofe|u|${url}`;
+  // Use the SharePoint web URL which Word can resolve properly
+  const webUrl = getSharePointWebUrl(url);
+  return `${proto}:ofe|u|${webUrl}`;
 }
 
 interface DocCardProps {
@@ -149,15 +161,7 @@ export function DocCard({ doc }: DocCardProps) {
 
   const handleOpenBrowser = () => {
     if (!doc.url) return;
-    // Convert path-based SharePoint URLs to web viewer URLs
-    let browserUrl = doc.url;
-    try {
-      const u = new URL(doc.url);
-      if (u.hostname.includes('sharepoint.com') && u.pathname.includes('/Documents/')) {
-        // Use SharePoint's web viewer: /_layouts/15/Doc.aspx?sourcedoc=<path>
-        browserUrl = `${u.origin}/_layouts/15/Doc.aspx?sourcedoc=${encodeURIComponent(decodeURIComponent(u.pathname))}&action=default`;
-      }
-    } catch {}
+    const browserUrl = getSharePointWebUrl(doc.url);
     window.docshelf.openExternal(browserUrl).catch(() => {});
   };
 
