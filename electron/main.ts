@@ -78,12 +78,8 @@ ipcMain.handle('save-docs', (_event, docs) => saveDocs(docs));
 ipcMain.handle('open-external', async (_event, url: string) => {
   if (!url) return;
   try {
-    // Decode first to normalize, then re-encode properly to avoid double-encoding
-    let clean = url;
-    try {
-      clean = decodeURI(url);
-    } catch { /* already decoded or invalid */ }
-    const encoded = encodeURI(clean);
+    // Only encode literal spaces, don't touch anything else
+    const encoded = url.replace(/ /g, '%20');
     await shell.openExternal(encoded);
   } catch (err) {
     console.error('Failed to open URL:', url, err);
