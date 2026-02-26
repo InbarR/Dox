@@ -119,8 +119,10 @@ function AppContent() {
         return;
       }
 
-      // Arrow key navigation through document list
+      // Arrow key navigation through document list (skip if in an input)
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
         const filteredDocs = getFilteredDocs();
         if (filteredDocs.length === 0) return;
 
