@@ -43,10 +43,16 @@ $aliases = @(${toResolve.map(a => `'${a}'`).join(',')})
 $results = @()
 foreach ($alias in $aliases) {
   try {
-    $s = [adsisearcher]"(samaccountname=$alias)"
-    $r = $s.FindOne()
-    if ($r -and $r.Properties['displayname']) {
-      $results += [PSCustomObject]@{ Alias = $alias; Name = ($r.Properties['displayname'][0]) }
+    # Try samaccountname first, then mailnickname, then mail prefix
+    $found = $false
+    foreach ($filter in @("(samaccountname=$alias)", "(mailnickname=$alias)", "(mail=$alias@*)")) {
+      $s = [adsisearcher]$filter
+      $r = $s.FindOne()
+      if ($r -and $r.Properties['displayname']) {
+        $results += [PSCustomObject]@{ Alias = $alias; Name = ($r.Properties['displayname'][0]) }
+        $found = $true
+        break
+      }
     }
   } catch {}
 }

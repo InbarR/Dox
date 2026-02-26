@@ -10,8 +10,8 @@ import {
 import {
   Dismiss24Regular,
   Send24Regular,
+  ArrowReset24Regular,
 } from '@fluentui/react-icons';
-import ReactMarkdown from 'react-markdown';
 import { useDocStore } from '../store/useDocStore';
 import { SOURCE_LABELS, TYPE_LABELS } from '../types';
 
@@ -31,6 +31,10 @@ const useStyles = makeStyles({
     padding: '12px 16px',
     borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
     flexShrink: 0,
+  },
+  headerActions: {
+    display: 'flex',
+    gap: '4px',
   },
   messages: {
     flex: 1,
@@ -91,9 +95,10 @@ const useStyles = makeStyles({
   docLink: {
     color: '#6CB4EE',
     cursor: 'pointer',
-    textDecoration: 'underline',
+    fontWeight: 700,
     ':hover': {
       color: '#9DD0FF',
+      textDecoration: 'underline',
     },
   },
 });
@@ -123,10 +128,10 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Find a doc by matching title text (fuzzy)
   const findDocByText = useCallback(
     (text: string) => {
-      const clean = text.replace(/[*"]/g, '').trim().toLowerCase();
+      const clean = text.replace(/[*"']/g, '').trim().toLowerCase();
+      if (!clean) return undefined;
       return docs.find((d) => {
         const t = d.title.toLowerCase();
         return t === clean || clean.includes(t) || t.includes(clean);
@@ -135,7 +140,6 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     [docs]
   );
 
-  // Click a doc title in the AI response to select it in the list
   const handleDocClick = useCallback(
     (title: string) => {
       const doc = findDocByText(title);
@@ -146,53 +150,102 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           el?.scrollIntoView({ block: 'nearest' });
         }, 0);
       } else {
-        // Fallback: put it in the search box
         setSearchQuery(title.replace(/[*"]/g, '').trim());
       }
     },
     [findDocByText, setSelectedDocId, setSearchQuery]
   );
 
-  // Custom markdown renderer that makes doc titles clickable
+  /** Simple markdown renderer: handles **bold**, lists, paragraphs */
   const renderMarkdown = useCallback(
     (content: string) => {
-      return (
-        <ReactMarkdown
-          components={{
-            // Make bold text clickable if it matches a doc title
-            strong: ({ children }) => {
-              const text = String(children);
-              const doc = findDocByText(text);
-              if (doc) {
-                return (
-                  <strong
-                    className={styles.docLink}
-                    onClick={() => handleDocClick(text)}
-                    title={`Click to select "${doc.title}"`}
-                  >
-                    {children}
-                  </strong>
-                );
-              }
-              return <strong>{children}</strong>;
-            },
-            p: ({ children }) => (
-              <p style={{ margin: '4px 0' }}>{children}</p>
-            ),
-            ul: ({ children }) => (
-              <ul style={{ margin: '4px 0', paddingLeft: '16px' }}>{children}</ul>
-            ),
-            ol: ({ children }) => (
-              <ol style={{ margin: '4px 0', paddingLeft: '16px' }}>{children}</ol>
-            ),
-            li: ({ children }) => (
-              <li style={{ margin: '2px 0' }}>{children}</li>
-            ),
-          }}
-        >
-          {content}
-        </ReactMarkdown>
-      );
+      const lines = content.split('\n');
+      const elements: React.ReactNode[] = [];
+      let listItems: React.ReactNode[] = [];
+      let listType: 'ul' | 'ol' | null = null;
+
+      const flushList = () => {
+        if (listItems.length > 0) {
+          const Tag = listType === 'ol' ? 'ol' : 'ul';
+          elements.push(
+            <Tag key={`list-${elements.length}`} style={{ margin: '4px 0', paddingLeft: '18px' }}>
+              {listItems}
+            </Tag>
+          );
+          listItems = [];
+          listType = null;
+        }
+      };
+
+      const renderInline = (text: string): React.ReactNode[] => {
+        // Split on **bold** patterns
+        const parts: React.ReactNode[] = [];
+        const regex = /\*\*([^*]+)\*\*/g;
+        let lastIndex = 0;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+          }
+          const boldText = match[1];
+          const doc = findDocByText(boldText);
+          if (doc) {
+            parts.push(
+              <span
+                key={`bold-${match.index}`}
+                className={styles.docLink}
+                onClick={() => handleDocClick(boldText)}
+                title={`Click to select "${doc.title}"`}
+              >
+                {boldText}
+              </span>
+            );
+          } else {
+            parts.push(<strong key={`bold-${match.index}`}>{boldText}</strong>);
+          }
+          lastIndex = regex.lastIndex;
+        }
+        if (lastIndex < text.length) {
+          parts.push(text.slice(lastIndex));
+        }
+        return parts;
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // Ordered list: "1. text" or "2. text"
+        const olMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+        if (olMatch) {
+          if (listType !== 'ol') flushList();
+          listType = 'ol';
+          listItems.push(<li key={`li-${i}`} style={{ margin: '2px 0' }}>{renderInline(olMatch[2])}</li>);
+          continue;
+        }
+
+        // Unordered list: "- text" or "* text"
+        const ulMatch = trimmed.match(/^[-*]\s+(.+)/);
+        if (ulMatch) {
+          if (listType !== 'ul') flushList();
+          listType = 'ul';
+          listItems.push(<li key={`li-${i}`} style={{ margin: '2px 0' }}>{renderInline(ulMatch[1])}</li>);
+          continue;
+        }
+
+        flushList();
+
+        if (!trimmed) continue; // skip empty lines
+
+        elements.push(
+          <p key={`p-${i}`} style={{ margin: '4px 0' }}>
+            {renderInline(trimmed)}
+          </p>
+        );
+      }
+
+      flushList();
+      return <>{elements}</>;
     },
     [findDocByText, handleDocClick, styles.docLink]
   );
@@ -201,37 +254,31 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     const docListSummary = docs
       .map(
         (d) =>
-          `- "${d.title}" (${TYPE_LABELS[d.type]}, ${SOURCE_LABELS[d.source]}${d.sharedBy ? `, by ${d.sharedBy}` : ''}${d.status !== 'new' ? `, status: ${d.status}` : ''}${d.openIn ? `, open in ${d.openIn}` : ''})`
+          `- "${d.title}" (${TYPE_LABELS[d.type]}, ${SOURCE_LABELS[d.source]}${d.sharedBy ? `, by ${d.sharedBy}` : ''}${d.status !== 'new' ? `, status: ${d.status}` : ''}${d.openIn ? `, open in ${d.openIn}` : ''}${d.category ? `, category: ${d.category}` : ''})`
       )
       .join('\n');
 
-    let context = `You are Dox AI, an assistant built into the Dox document tracker app. You help users manage and understand their documents.
+    let context = `You are Dox AI, an assistant built into the Dox document tracker app.
 
-The user has ${docs.length} documents tracked:
+The user has ${docs.length} documents:
 ${docListSummary}
 `;
 
     if (selectedDoc) {
       context += `
-The user currently has selected: "${selectedDoc.title}"
-- Type: ${TYPE_LABELS[selectedDoc.type]}
-- Source: ${SOURCE_LABELS[selectedDoc.source]}
+Currently selected: "${selectedDoc.title}"
+- Type: ${TYPE_LABELS[selectedDoc.type]}, Source: ${SOURCE_LABELS[selectedDoc.source]}
 - URL: ${selectedDoc.url || 'none'}
 ${selectedDoc.sharedBy ? `- Owner: ${selectedDoc.sharedBy}` : ''}
 ${selectedDoc.notes ? `- Notes: ${selectedDoc.notes}` : ''}
 ${selectedDoc.tags.length ? `- Tags: ${selectedDoc.tags.join(', ')}` : ''}
-${selectedDoc.status !== 'new' ? `- Status: ${selectedDoc.status}` : ''}
-${selectedDoc.openIn ? `- Currently open in: ${selectedDoc.openIn}` : ''}
+${selectedDoc.category ? `- Category: ${selectedDoc.category}` : ''}
 `;
     }
 
     context += `
-IMPORTANT: When referencing documents, always wrap their exact title in **bold** markdown. This makes them clickable in the UI.
-Be concise and helpful. You can help with:
-- Finding documents by topic, person, or type
-- Summarizing what documents are about (based on titles and context)
-- Suggesting which documents to prioritize
-- Answering questions about the document list`;
+IMPORTANT: When listing documents, wrap each document title in **bold** so they become clickable links in the UI.
+Be concise. Help find, summarize, and manage documents.`;
 
     return context;
   }
@@ -241,8 +288,7 @@ Be concise and helpful. You can help with:
     if (!text || streaming) return;
 
     setInput('');
-    const userMsg: ChatMessage = { role: 'user', content: text };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { role: 'user', content: text }]);
     setStreaming(true);
 
     const apiMessages = [
@@ -253,15 +299,9 @@ Be concise and helpful. You can help with:
 
     const result = await window.docshelf.chatSend(apiMessages);
     if (result.error) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: `Error: ${result.error}` },
-      ]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${result.error}` }]);
     } else if (result.reply) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: result.reply! },
-      ]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: result.reply! }]);
     }
     setStreaming(false);
   }
@@ -272,12 +312,23 @@ Be concise and helpful. You can help with:
         <Text weight="semibold" size={300}>
           Dox AI
         </Text>
-        <Button
-          appearance="subtle"
-          size="small"
-          icon={<Dismiss24Regular />}
-          onClick={onClose}
-        />
+        <div className={styles.headerActions}>
+          {messages.length > 0 && (
+            <Button
+              appearance="subtle"
+              size="small"
+              icon={<ArrowReset24Regular />}
+              onClick={() => setMessages([])}
+              title="New session"
+            />
+          )}
+          <Button
+            appearance="subtle"
+            size="small"
+            icon={<Dismiss24Regular />}
+            onClick={onClose}
+          />
+        </div>
       </div>
 
       {selectedDoc && (
@@ -288,9 +339,7 @@ Be concise and helpful. You can help with:
 
       {messages.length === 0 ? (
         <div className={styles.empty}>
-          <Text size={400} weight="semibold">
-            Ask me anything
-          </Text>
+          <Text size={400} weight="semibold">Ask me anything</Text>
           <Text size={200}>
             I can see all {docs.length} of your documents.
             {selectedDoc && ` Currently looking at "${selectedDoc.title}".`}
