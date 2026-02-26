@@ -34,6 +34,19 @@ const useStyles = makeStyles({
     display: 'flex',
     overflow: 'hidden',
   },
+  listColumn: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  detailsBar: {
+    maxHeight: '200px',
+    overflowY: 'auto',
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    flexShrink: 0,
+  },
   dragBar: {
     height: '40px',
     '-webkit-app-region': 'drag' as unknown as string,
@@ -342,7 +355,14 @@ function AppContent() {
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
         <div className={styles.body}>
-          <DocList />
+          <div className={styles.listColumn}>
+            <DocList />
+            {selectedDocId && chatOpen && (
+              <div className={styles.detailsBar}>
+                <DocDetails />
+              </div>
+            )}
+          </div>
           {selectedDocId && !chatOpen && <DocDetails />}
           {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
         </div>

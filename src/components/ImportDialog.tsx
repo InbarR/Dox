@@ -381,7 +381,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
         <>
           <div className={styles.statusBar}>
             <Text size={200}>
-              Found {items.length} document{items.length !== 1 ? 's' : ''} ({selectedCount} selected)
+              {items.filter((i) => !i.alreadyExists).length} new document{items.filter((i) => !i.alreadyExists).length !== 1 ? 's' : ''} ({selectedCount} selected)
             </Text>
             <div className={styles.selectActions}>
               <Button size="small" appearance="subtle" onClick={handleSelectAll}>
@@ -402,7 +402,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
           </div>
 
           <div className={styles.list}>
-            {items.map((item) => (
+            {items.filter((item) => !item.alreadyExists).map((item) => (
               <div
                 key={item.id}
                 className={`${styles.item} ${

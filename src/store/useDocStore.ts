@@ -84,11 +84,28 @@ export const useDocStore = create<DocStore>((set, get) => ({
 
   loadDocs: async () => {
     const raw = await window.docshelf.loadDocs();
-    const docs = (raw || []).map((d: any) => ({
+    const migrated = (raw || []).map((d: any) => ({
       ...d,
       status: d.status === 'unread' || d.status === 'reviewed' ? 'new' : d.status,
     }));
-    // Extract unique categories from docs
+    // Dedup by title on load
+    const seen = new Map<string, DocItem>();
+    for (const d of migrated) {
+      const key = d.title.toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing) {
+        seen.set(key, d);
+      } else {
+        // Merge: keep longer URL, preserve user metadata
+        if ((d.url || '').length > (existing.url || '').length) existing.url = d.url;
+        if (d.category && !existing.category) existing.category = d.category;
+        if (d.status !== 'new' && existing.status === 'new') existing.status = d.status;
+        if (d.pinned) existing.pinned = true;
+        if (d.sharedBy && !existing.sharedBy) existing.sharedBy = d.sharedBy;
+      }
+    }
+    const docs = [...seen.values()];
+    if (docs.length < migrated.length) persist(docs); // save deduped
     const cats = new Set<string>();
     for (const d of docs) {
       if (d.category) cats.add(d.category);
