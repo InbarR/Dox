@@ -149,7 +149,16 @@ export function DocCard({ doc }: DocCardProps) {
 
   const handleOpenBrowser = () => {
     if (!doc.url) return;
-    window.docshelf.openExternal(doc.url).catch(() => {});
+    // Convert path-based SharePoint URLs to web viewer URLs
+    let browserUrl = doc.url;
+    try {
+      const u = new URL(doc.url);
+      if (u.hostname.includes('sharepoint.com') && u.pathname.includes('/Documents/')) {
+        // Use SharePoint's web viewer: /_layouts/15/Doc.aspx?sourcedoc=<path>
+        browserUrl = `${u.origin}/_layouts/15/Doc.aspx?sourcedoc=${encodeURIComponent(decodeURIComponent(u.pathname))}&action=default`;
+      }
+    } catch {}
+    window.docshelf.openExternal(browserUrl).catch(() => {});
   };
 
   const handleOpenApp = () => {
