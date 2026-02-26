@@ -117,6 +117,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [historyIdx, setHistoryIdx] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docs = useDocStore((s) => s.docs);
   const selectedDocId = useDocStore((s) => s.selectedDocId);
@@ -379,6 +380,27 @@ Be concise. Help find, summarize, and manage documents.`;
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSend();
+              setHistoryIdx(-1);
+            }
+            if (e.key === 'ArrowUp') {
+              const userMsgs = messages.filter((m) => m.role === 'user');
+              if (userMsgs.length === 0) return;
+              e.preventDefault();
+              const newIdx = historyIdx < userMsgs.length - 1 ? historyIdx + 1 : historyIdx;
+              setHistoryIdx(newIdx);
+              setInput(userMsgs[userMsgs.length - 1 - newIdx].content);
+            }
+            if (e.key === 'ArrowDown') {
+              const userMsgs = messages.filter((m) => m.role === 'user');
+              e.preventDefault();
+              if (historyIdx <= 0) {
+                setHistoryIdx(-1);
+                setInput('');
+              } else {
+                const newIdx = historyIdx - 1;
+                setHistoryIdx(newIdx);
+                setInput(userMsgs[userMsgs.length - 1 - newIdx].content);
+              }
             }
           }}
           appearance="filled-darker"
