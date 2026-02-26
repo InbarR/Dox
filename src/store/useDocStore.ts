@@ -333,6 +333,8 @@ export const useDocStore = create<DocStore>((set, get) => ({
     // Filter by view
     if (filterView === 'pinned') {
       filtered = filtered.filter((d) => d.pinned);
+    } else if (filterView === 'open') {
+      filtered = filtered.filter((d) => !!d.openIn);
     } else if (filterView !== 'all') {
       filtered = filtered.filter((d) => d.status === filterView);
     }

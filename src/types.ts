@@ -35,6 +35,7 @@ export interface DocItem {
 export type FilterView =
   | 'all'
   | 'pinned'
+  | 'open'
   | 'reading'
   | 'action-needed'
   | 'done';

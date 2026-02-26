@@ -73,6 +73,7 @@ const useStyles = makeStyles({
 const NAV_ITEMS: { view: FilterView; label: string; icon: React.ReactElement }[] = [
   { view: 'all', label: 'All Documents', icon: <DocumentMultiple24Regular /> },
   { view: 'pinned', label: 'Pinned', icon: <Pin24Regular /> },
+  { view: 'open', label: 'Open Now', icon: <BookOpen24Regular /> },
 ];
 
 const STATUS_NAV: { view: FilterView; label: string; icon: React.ReactElement }[] = [
@@ -97,6 +98,7 @@ export function Sidebar() {
   function getCount(view: FilterView): number {
     if (view === 'all') return docs.length;
     if (view === 'pinned') return docs.filter((d) => d.pinned).length;
+    if (view === 'open') return docs.filter((d) => !!d.openIn).length;
     return docs.filter((d) => d.status === view).length;
   }
 
