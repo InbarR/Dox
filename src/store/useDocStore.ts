@@ -371,27 +371,34 @@ export const useDocStore = create<DocStore>((set, get) => ({
       filtered = filtered.filter((d) => d.source === filterSource);
     }
 
-    // Search
+    // Search - supports AND (e.g. "squad AND chat")
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      // Map common search terms to type codes
       const typeAliases: Record<string, string> = {
         word: 'doc', doc: 'doc', docx: 'doc',
         ppt: 'ppt', pptx: 'ppt', powerpoint: 'ppt',
         xls: 'xls', xlsx: 'xls', excel: 'xls',
         pdf: 'pdf',
       };
-      const matchedType = typeAliases[q];
-      filtered = filtered.filter(
-        (d) =>
+
+      const matchesTerm = (d: DocItem, term: string): boolean => {
+        const q = term.toLowerCase().trim();
+        if (!q) return true;
+        const matchedType = typeAliases[q];
+        return (
           d.title.toLowerCase().includes(q) ||
           d.sharedBy.toLowerCase().includes(q) ||
           d.url.toLowerCase().includes(q) ||
           d.notes.toLowerCase().includes(q) ||
           d.tags.some((t) => t.toLowerCase().includes(q)) ||
           d.type === matchedType ||
-          d.source.toLowerCase().includes(q)
-      );
+          d.source.toLowerCase().includes(q) ||
+          (d.category || '').toLowerCase().includes(q)
+        );
+      };
+
+      // Split on AND (case-insensitive) - all terms must match
+      const terms = searchQuery.split(/\s+AND\s+/i);
+      filtered = filtered.filter((d) => terms.every((term) => matchesTerm(d, term)));
     }
 
     // Sort - pinned always on top

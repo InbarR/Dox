@@ -399,7 +399,7 @@ export async function scanOpenDocs(): Promise<ScannedDoc[]> {
       .filter((item: any) => item.Title)
       .map((item: any) => ({
         title: item.Title || extractTitle(item.Path || ''),
-        path: item.Path || '',
+        path: (item.Path || '').replace(/ /g, '%20'),
         type: (item.Type || detectType(item.Path || '')) as ScannedDoc['type'],
         source: item.Path ? detectSource(item.Path) : 'other',
         app: item.App,
@@ -474,7 +474,7 @@ export async function scanRecentDocs(): Promise<ScannedDoc[]> {
 
       results.push({
         title: extractTitle(item.Path),
-        path: item.Path,
+        path: item.Path.replace(/ /g, '%20'),
         type: (item.AppType || detectType(item.Path)) as ScannedDoc['type'],
         source: detectSource(item.Path),
         app: item.App,

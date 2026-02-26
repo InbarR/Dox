@@ -121,6 +121,8 @@ function getDesktopAppUrl(url: string, type: string): string | null {
   };
   const proto = protocols[type];
   if (!proto) return null;
+  // Encode spaces for the protocol URL
+  url = url.replace(/ /g, '%20');
   return `${proto}:ofe|u|${url}`;
 }
 
