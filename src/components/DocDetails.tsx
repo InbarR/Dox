@@ -28,7 +28,9 @@ import { StatusBadge } from './StatusBadge';
 
 const useStyles = makeStyles({
   panel: {
-    width: '320px',
+    width: '280px',
+    minWidth: '220px',
+    flexShrink: 0,
     borderLeft: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground2,
     display: 'flex',

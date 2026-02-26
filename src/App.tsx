@@ -429,15 +429,12 @@ function AppContent() {
           />
           <div className={styles.body}>
             <DocList />
-            {selectedDocId && !chatOpen && <DocDetails />}
+            {selectedDocId && <DocDetails />}
             {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
           </div>
         </div>
       </div>
 
-      {selectedDocId && chatOpen && (
-        <BottomDetailsBar />
-      )}
 
       {isDragging && (
         <div className={styles.dropOverlay}>

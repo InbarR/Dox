@@ -17,7 +17,9 @@ import { SOURCE_LABELS, TYPE_LABELS } from '../types';
 
 const useStyles = makeStyles({
   panel: {
-    width: '380px',
+    width: '340px',
+    minWidth: '280px',
+    flexShrink: 0,
     borderLeft: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground2,
     display: 'flex',
