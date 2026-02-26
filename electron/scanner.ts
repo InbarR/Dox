@@ -396,7 +396,7 @@ export async function scanOpenDocs(): Promise<ScannedDoc[]> {
     const items = parseJsonOutput(stdout);
 
     const docs = items
-      .filter((item: any) => item.Title)
+      .filter((item: any) => item.Title && item.Path && item.Path.startsWith('http'))
       .map((item: any) => ({
         title: item.Title || extractTitle(item.Path || ''),
         path: (item.Path || '').replace(/ /g, '%20'),
