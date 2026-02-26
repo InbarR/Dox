@@ -118,6 +118,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [historyIdx, setHistoryIdx] = useState(-1);
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docs = useDocStore((s) => s.docs);
   const selectedDocId = useDocStore((s) => s.selectedDocId);
@@ -289,6 +290,7 @@ Be concise. Help find, summarize, and manage documents.`;
     if (!text || streaming) return;
 
     setInput('');
+    setPromptHistory((prev) => [text, ...prev]);
     setMessages((prev) => [...prev, { role: 'user', content: text }]);
     setStreaming(true);
 
@@ -303,6 +305,27 @@ Be concise. Help find, summarize, and manage documents.`;
       setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${result.error}` }]);
     } else if (result.reply) {
       setMessages((prev) => [...prev, { role: 'assistant', content: result.reply! }]);
+
+      // Auto-filter the doc list to show mentioned docs
+      const mentioned: string[] = [];
+      const boldRegex = /\*\*([^*]+)\*\*/g;
+      let m;
+      while ((m = boldRegex.exec(result.reply)) !== null) {
+        const doc = findDocByText(m[1]);
+        if (doc) mentioned.push(doc.id);
+      }
+      if (mentioned.length > 0) {
+        // Build a search query that matches the mentioned docs
+        const titles = mentioned
+          .map((id) => docs.find((d) => d.id === id)?.title)
+          .filter(Boolean);
+        if (titles.length === 1) {
+          setSearchQuery(titles[0]!);
+        } else if (titles.length > 1) {
+          // Find a common substring or use the first few words of the query
+          setSearchQuery(text);
+        }
+      }
     }
     setStreaming(false);
   }
@@ -383,15 +406,13 @@ Be concise. Help find, summarize, and manage documents.`;
               setHistoryIdx(-1);
             }
             if (e.key === 'ArrowUp') {
-              const userMsgs = messages.filter((m) => m.role === 'user');
-              if (userMsgs.length === 0) return;
+              if (promptHistory.length === 0) return;
               e.preventDefault();
-              const newIdx = historyIdx < userMsgs.length - 1 ? historyIdx + 1 : historyIdx;
+              const newIdx = historyIdx < promptHistory.length - 1 ? historyIdx + 1 : historyIdx;
               setHistoryIdx(newIdx);
-              setInput(userMsgs[userMsgs.length - 1 - newIdx].content);
+              setInput(promptHistory[newIdx]);
             }
             if (e.key === 'ArrowDown') {
-              const userMsgs = messages.filter((m) => m.role === 'user');
               e.preventDefault();
               if (historyIdx <= 0) {
                 setHistoryIdx(-1);
@@ -399,7 +420,7 @@ Be concise. Help find, summarize, and manage documents.`;
               } else {
                 const newIdx = historyIdx - 1;
                 setHistoryIdx(newIdx);
-                setInput(userMsgs[userMsgs.length - 1 - newIdx].content);
+                setInput(promptHistory[newIdx]);
               }
             }
           }}
